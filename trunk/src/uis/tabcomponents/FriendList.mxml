@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:mx="http://www.adobe.com/2006/mxml" 
+		   width="100%" 
+		   height="100%" 
+		   visible="true" 
+		   creationComplete="onInit()" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.data.TwitterUser;
+			import uis.datacomponents.Friend;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import actionscript.events.TwitterEngineEvent;
+			import mx.events.CollectionEvent;
+			import mx.collections.ArrayCollection;
+			
+			//private var twitterEngine:TwitterEngine = TwitterEngine.instanceOfTwitterEngine; 
+			
+			private function onInit():void
+			{
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.FRIENDS_UPDATED,friendsUpdated);
+				function friendsUpdated(e:TwitterEngineEvent = null):void
+				{
+					addFriends(FactoryManager.instanceOfTwitterEngine.userList);
+				}
+				friendsUpdated();
+			}
+			
+			private function addFriends(friends:ArrayCollection):void
+			{
+				for each(var dirtyFriend:Friend in this.getChildren())
+				{
+					dirtyFriend.clean();
+				}
+				
+				this.removeAllChildren();
+				
+				var holder:ArrayCollection = new ArrayCollection();
+				var sort:Sort = new Sort();
+				sort.fields = [new SortField("name")];
+				holder.sort = sort;
+				for each(var currUser:TwitterUser in  friends)
+				{
+					var friend:Friend = new Friend();
+					friend.setUser(currUser);
+					friend.height = 90;
+					holder.addItem(friend);
+				}
+				
+				holder.refresh();
+				
+				for each(var currFriend:Friend in  holder)
+				{
+					this.addChild(currFriend);
+					
+					/**
+					if(friendVB.getChildren().length > 0)
+					{
+						friendVB.addChildAt(currFriend, friendVB.getChildren().length - 1);
+					}
+					else
+					{
+						friendVB.addChild(currFriend);
+					}
+					/**/
+				}
+			}
+		]]>
+	</mx:Script>
+	
+ </mx:VBox>

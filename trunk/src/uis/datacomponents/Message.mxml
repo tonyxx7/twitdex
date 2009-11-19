@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+		   width="100%"
+		   height="54"
+		   verticalScrollPolicy="off" 
+		   horizontalScrollPolicy="off"
+		   paddingBottom="0" 
+		   paddingTop="0"
+		   paddingLeft="0" 
+		   paddingRight="0"
+		   creationComplete="onInit()">
+	<mx:states>
+		<mx:State name="msg">
+			<mx:RemoveChild target="{statusTA}"/>
+			<mx:RemoveChild target="{userName}"/>
+			<mx:RemoveChild target="{tweetDate}"/>
+			<mx:RemoveChild target="{label1}"/>
+			<mx:RemoveChild target="{fav}"/>
+			<mx:RemoveChild target="{label2}"/>
+			<mx:AddChild relativeTo="{canvas}" position="lastChild">
+				<mx:TextArea x="5" y="5" width="{this.width - 32}" height="125" id="messageTA" wordWrap="true" editable="true" enabled="true"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{canvas}" position="lastChild">
+				<mx:Button x="5" y="134" label="Send" id="sendBtn" click="sendMessage()"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{canvas}" position="lastChild">
+				<mx:Button x="80" y="134" label="Cancel" id="cancelBtn" click="switchState()"/>
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.data.TwitterUser;
+			import actionscript.data.TwitterDirectMessage;
+			import mx.collections.Sort;
+			import mx.collections.SortField;
+			import mx.rpc.soap.LoadEvent;
+			import mx.controls.Image;
+			
+			import mx.utils.LoaderUtil;
+			import mx.collections.ArrayCollection;
+			
+			import flash.display.Loader;
+			import flash.events.Event;
+			import flash.net.URLRequest;
+			import mx.core.UIComponent;
+			
+	        public var createdAt:Date;
+	        public var time:Number;
+			private var sender:TwitterUser;
+			private var text:String;
+			
+            [Embed(source="../../assets/Star_Prata.gif")]
+            [Bindable]
+            public var envolope:Class;  
+            
+            private function onInit():void
+			{
+				tweetDate.text = (createdAt.getMonth() + 1) + "\\" + 
+								 createdAt.date.toString() + "\\" + 
+								 createdAt.getFullYear() + "\n" +
+								 (createdAt.hours + 1) + ":" +
+								 createdAt.minutes;
+				
+				statusTA.text = text;
+				
+				userName.text = sender.screenName;
+			}
+			
+			public function setMessage(message:TwitterDirectMessage):void
+			{
+				sender = message.sender;
+				text = message.text;
+				createdAt = message.createdAt;
+				time = message.createdAt.time;
+			}
+			
+			protected function replyClicked():void
+			{
+				
+			}
+			
+			private function switchState():void
+			{
+				if(currentState == null)
+				{
+					currentState = "msg";
+					this.height = 200;
+				}
+				else
+				{
+					currentState = null;
+					this.height = 54;
+				}
+			}
+			
+			public function sendMessage():void
+			{
+				if(messageTA.text != "")
+				{
+					FactoryManager.instanceOfTwitterEngine.sendMessage(sender.screenName, messageTA.text);
+					messageTA.text = "";
+					switchState();
+				}
+			}
+			
+			public function clean():void
+			{
+				sender = null;
+	        	createdAt = null;
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas id="canvas">
+		<mx:Button id="fav" x="{this.width - fav.width - 2}" y="32" height="20" click="switchState()" label="Reply"/>
+		<mx:Label text="Date" x="10" y="25" fontSize="8" id="label1"/>
+		<mx:Label text="From" x="10" y="2" fontSize="8" id="label2"/>
+		<mx:Text x="42" y="24" id="tweetDate" fontSize="8"/>
+		<mx:Text x="44" y="2" id="userName" fontSize="8"/>
+		<mx:TextArea id="statusTA" x="115" y="2" width="{this.width - statusTA.x - fav.width - 4}" height="50" editable="false" wordWrap="true"/>
+	</mx:Canvas>
+</mx:Canvas>

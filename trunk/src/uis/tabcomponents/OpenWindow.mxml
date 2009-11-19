@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		   width="100%" 
+		   height="100%"
+		   backgroundAlpha="100"
+		   creationComplete="onInit()" 
+		   dropShadowEnabled="false" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.data.TwitterUser;
+			import actionscript.factories.FactoryManager;
+			import actionscript.observers.SaveObserver;
+			import uis.windows.TwitWindow;
+			import uis.windows.MessagesWindow;
+			import uis.windows.FavoritesWindow;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.managers.WindowedSystemManager;
+			import mx.core.Window;
+			import actionscript.events.SaveObserverEvent;
+			import actionscript.events.TwitterEngineEvent;
+			import mx.collections.ArrayCollection;
+			import mx.events.ListEvent;
+			import mx.collections.XMLListCollection;
+			
+			private var saveObserver:SaveObserver = SaveObserver.instanceOfSaveObserver;
+			
+			public var windows:ArrayCollection;
+			
+			private var outOfMemory:Boolean;
+			
+			private function onInit():void
+			{
+				outOfMemory = false;
+				
+				windows = new ArrayCollection();
+				
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				function newUser(e:Event = null):void
+				{
+					closeWindows();
+					setList();
+				}
+				
+				saveObserver.addEventListener(SaveObserverEvent.SAVES_UPDATED, setList);
+				function setList(e:Event = null):void
+				{
+					var holder:XML = saveObserver.getUserXML();
+					if(holder != null)
+					{
+						list.dataProvider = holder.windows.children();
+					}
+				}
+				setList();
+				
+			}
+			
+			private function listLabel(item:Object):String
+            {
+                var node:XML = XML(item);
+                if( node.localName() == "file" )
+                {
+                    return node.@title;
+                }
+                else
+                {
+                    return null; // node.@user;
+                }
+            }
+            
+			public function closeWindows():void
+            {
+				for each(var win:TwitWindow in windows)
+				{
+					win.close();
+					win.addEventListener(Event.CLOSE, close);
+					function close(e:Event):void
+					{
+						closeWindows();
+					}
+				}
+            }
+            
+			public function openWindow(title:String = ""):void
+			{
+/**
+trace(System.totalMemory.toString());
+
+var t:Twitdex = Twitdex(this.parentDocument);
+/**/
+
+				if(System.totalMemory < 0)
+				{
+					outOfMemory = true;
+					Alert.yesLabel = "AYE AYE";
+					Alert.show("She's given us all she's got captain.  If she gives us any more she's gonna BLOW!!!", "You were greedy!!!", 1, this);
+				}
+				
+				if(windows.length < 5)
+				{
+					if(windows == null)
+					{
+						windows = new ArrayCollection();
+					}
+					
+					var newWindowTitle:String = "";
+					if(title == ""){
+						newWindowTitle = windowSelected.text;
+					}
+					else
+					{
+						newWindowTitle = title;
+					}
+					
+					for each(var win:Window in windows)
+					{
+						if(win.title == newWindowTitle)
+						{
+							return;
+						}
+					}
+					
+					if(newWindowTitle == "all")
+					{
+						var windowHolder:TwitWindow = new TwitWindow();
+						
+						for each(var twitterUser:TwitterUser in FactoryManager.instanceOfTwitterEngine.userList)
+						{
+							windowHolder.addUser(twitterUser);
+						}
+						
+						windows.addItem(windowHolder);
+						windowHolder.title = newWindowTitle;
+						windowHolder.open();
+						windowHolder.updateDisplay();
+						windowHolder.addEventListener(Event.CLOSING, removeClosingWindow);
+					}
+					else if(FactoryManager.instanceOfTwitterEngine.user != null)
+					{
+						for each(var xmlWindow:XML in saveObserver.getUserXML().windows.children())
+						{
+							if(xmlWindow.@title == newWindowTitle)
+							{
+								var windowHolder:TwitWindow = new TwitWindow();
+								for each(var xmlUser:XML in xmlWindow.children())
+								{
+									for each(var twitterUser:TwitterUser in FactoryManager.instanceOfTwitterEngine.userList)
+									{
+										if(twitterUser.id == xmlUser.@id)
+										{
+											windowHolder.addUser(twitterUser);
+										}
+									}
+								}
+								windows.addItem(windowHolder);
+								windowHolder.title = newWindowTitle;
+								windowHolder.open();
+								windowHolder.updateDisplay();
+								windowHolder.addEventListener(Event.CLOSING, removeClosingWindow);
+								break;
+							}
+						}
+					}
+				}
+				else
+				{
+					Alert.yesLabel = "ok";
+					Alert.show("You may have a maximum of 5 windows open at one time.", "Too many windows", 1, this);
+					outOfMemory = false;
+				}
+			}
+            
+			public function removeWindow():void
+			{
+				if(windowSelected.text != "all")saveObserver.removeUserWindow(windowSelected.text)
+			}
+            
+			private function newWindowBtn():void
+			{
+				if(FactoryManager.instanceOfTwitterEngine.user != null) // && !saveObserver.doesUserWindowExist(windowSelected.text))
+				{
+					if(windows.length < 5)
+					{
+						var windowHolder:TwitWindow = new TwitWindow();
+						windowHolder.addEventListener(Event.CLOSING, removeClosingWindow);
+						windowHolder.open();
+					}
+					else
+					{
+						Alert.yesLabel = "ok";
+						Alert.show("You may have a maximum of 5 windows open at one time.", "Too many windows", 1, this);
+						outOfMemory = false;
+					}
+					windows.addItem(windowHolder);
+				}
+			}
+            
+			private function openFavoritesWindow():void
+			{
+				for each(var win:Window in windows)
+				{
+					if(win.title == "Favorites")
+					{
+						return;
+					}
+				}
+				
+				if(FactoryManager.instanceOfTwitterEngine.user != null) // && !saveObserver.doesUserWindowExist(windowSelected.text))
+				{
+					if(windows.length < 5)
+					{
+						var windowHolder:FavoritesWindow = new FavoritesWindow();
+						windowHolder.addEventListener(Event.CLOSING, removeClosingWindow);
+						windowHolder.open();
+					}
+					else
+					{
+						Alert.yesLabel = "ok";
+						Alert.show("You may have a maximum of 5 windows open at one time.", "Too many windows", 1, this);
+						outOfMemory = false;
+					}
+					windows.addItem(windowHolder);
+				}
+			}
+            
+			private function openMessagesWindow():void
+			{
+				for each(var win:Window in windows)
+				{
+					if(win.title == "Messages")
+					{
+						return;
+					}
+				}
+				
+				if(FactoryManager.instanceOfTwitterEngine.user != null) // && !saveObserver.doesUserWindowExist(windowSelected.text))
+				{
+					if(windows.length < 5)
+					{
+						var windowHolder:MessagesWindow = new MessagesWindow();
+						windowHolder.addEventListener(Event.CLOSING, removeClosingWindow);
+						windowHolder.open();
+					}
+					else
+					{
+						Alert.yesLabel = "ok";
+						Alert.show("You may have a maximum of 5 windows open at one time.", "Too many windows", 1, this);
+						outOfMemory = false;
+					}
+					windows.addItem(windowHolder);
+				}
+			}
+            
+			private function removeClosingWindow(e:Event):void
+			{
+				windows.removeItemAt(windows.getItemIndex(e.currentTarget)).removeEventListener(Event.CLOSING, removeClosingWindow);
+				System.gc();
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas x="15" y="15" width="280" height="311" borderStyle="none">
+		<mx:Button x="0" y="0" width="65"  label="open" click="openWindow()"/>
+		<mx:TextInput x="73" y="0" width="127" id="windowSelected" text="{list.selectedItem.@title}" editable="true" enabled="true" textAlign="center"/>
+		<mx:List id="list" labelFunction="listLabel" x="0" y="30" width="100%" height="250" doubleClickEnabled="true" doubleClick="openWindow()"></mx:List>
+		<mx:Button width="72"  label="delete" click="removeWindow()" x="208" y="0"/>
+		<mx:Button x="0" y="289" label="New" click="newWindowBtn()" width="{MessagesBtn.width}"/>
+		<!-- <mx:Button x="100" y="289" label="Favorites" click="openFavoritesWindow()" id="favoritesBtn"/> -->
+		<mx:Button x="199" y="289" label="Messages" click="openMessagesWindow()" id="MessagesBtn"/>
+	</mx:Canvas>
+ </mx:Panel>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Window xmlns:mx="http://www.adobe.com/2006/mxml"
+        layout="absolute"
+        title="Reply"
+        width="300"
+        height="128"
+        horizontalScrollPolicy="off"
+        verticalScrollPolicy="off"
+        showFlexChrome="true"
+        alwaysInFront="true"
+        showTitleBar="true"
+        showGripper="false"
+        showStatusBar="false"
+        systemChrome="none"
+        visible="true"
+        minimizable = "false"
+        maximizable = "false" 
+        transparent="true" 
+        creationComplete="onInit()" >
+
+    <mx:Script>
+        <![CDATA[
+        	import actionscript.FactoryManager;
+			
+			public var userName:String;
+			
+			private var offSetX:Number;
+			private var offSetY:Number;
+			
+			private var _offSetDisplayObject:DisplayObject;
+			
+			private function init(e:FlexEvent):void
+			{
+            	this.stage.nativeWindow.x = _offSetDisplayObject.stage.nativeWindow.x + offSetX;
+            	this.stage.nativeWindow.y = _offSetDisplayObject.stage.nativeWindow.y + offSetY;
+            	_offSetDisplayObject.addEventListener(Event.CLOSING, closeWindow);
+            	function closeWindow(e:Event):void
+            	{
+            		close();
+            		_offSetDisplayObject.removeEventListener(Event.CLOSING, closeWindow);
+            	}
+			}
+			
+			public function set offSetDisplayObject(offSetDisplayObject:DisplayObject):void
+			{
+				this._offSetDisplayObject = offSetDisplayObject;
+			}
+			
+			public function offSet(x:int, y:int):void
+			{
+				offSetX = x;
+				offSetY = y;
+			}
+
+			private function sendReply():void
+			{
+				var tweet:String = "@" + userName + " " + replyTA.text;
+				FactoryManager.instanceOfTwitterEngine.sendTweet(tweet);
+				this.close();
+			}
+			
+			public function setUserName(userName:String):void
+			{
+				this.userName = userName;
+			}
+			
+        ]]>
+    </mx:Script>
+    
+	<mx:TextArea x="10" y="10" height="50" width="278" id="replyTA"/>
+	<mx:Button x="10" y="68" label="Reply" click="sendReply()" id="replyBtn"/>
+	<mx:Button x="225" y="68" label="Cancel" click="{this.close()}" id="cancelReplyBtn"/>
+</mx:Window>

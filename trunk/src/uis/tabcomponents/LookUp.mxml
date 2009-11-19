@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+		   width="100%" 
+		   height="100%" 
+		   horizontalScrollPolicy="off" 
+		   verticalScrollPolicy="off" 
+		   visible="true" 
+		   creationComplete="init()" 
+		   dropShadowEnabled="false" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.data.TwitterSearch;
+			
+			private function init():void
+			{
+				
+			}
+			
+			private function search():void
+			{
+				var search:TwitterSearch = new TwitterSearch();
+				
+				search.addKeyword("hair");
+				
+				FactoryManager.instanceOfTwitterEngine.searchFor(search);
+			}
+		]]>
+	</mx:Script>
+	
+		<mx:TextInput id="searchTI" x="0" y="0" width="{this.width - searchBtn.width}" height="{searchBtn.height}" />
+		<mx:Button id="searchBtn" x="{this.width - searchBtn.width}" y="0" label="add" click="search()"/>
+	
+ </mx:Canvas>
