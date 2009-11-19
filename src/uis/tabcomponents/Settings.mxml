@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" 
+		  height="100%"
+		  backgroundAlpha="100"
+		  creationComplete="onInit()" 
+		  dropShadowEnabled="false" >
+	<mx:Script>
+		<![CDATA[
+			import actionscript.observers.SaveObserver;
+			import actionscript.factories.FactoryManager;
+			import air.update.events.StatusFileUpdateEvent;
+			import air.update.events.StatusFileUpdateErrorEvent;
+			import actionscript.events.TwitterEngineEvent;
+			
+	        import flash.events.ErrorEvent;
+	        import air.update.ApplicationUpdaterUI;
+	        import air.update.events.UpdateEvent;
+	        import mx.controls.Alert;
+	
+	        private var settingsXML:XMLList;
+			
+			private function onInit():void
+			{
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				function newUser(e:Event = null):void
+				{
+					if(SaveObserver.instanceOfSaveObserver.getUserXML() != null)
+					{
+						settingsXML = SaveObserver.instanceOfSaveObserver.getUserXML().settings;
+						setUserSettings();
+					}
+				}
+				newUser();
+			}
+			
+			private function setUserSettings():void
+			{
+				tweetsNumber.value = settingsXML.tweetLimit;
+			}
+			
+			private function apply():void
+			{
+				settingsXML.tweetLimit = tweetsNumber.value;
+				
+				SaveObserver.instanceOfSaveObserver.updateUserSettings(XML(settingsXML.toXMLString()));
+			}
+			
+			private function checkForUpdates():void
+			{
+				var appUpdater:ApplicationUpdaterUI = new ApplicationUpdaterUI();
+	            appUpdater.updateURL = "http://madmantechnologies.com/twitdex/update.xml"; // Server-side XML file describing update
+	            appUpdater.isCheckForUpdateVisible = false; // We won't ask permission to check for an update
+	            appUpdater.addEventListener(UpdateEvent.INITIALIZED, onUpdate); // Once initialized, run onUpdate
+	            appUpdater.addEventListener(StatusFileUpdateEvent.FILE_UPDATE_STATUS, appUpdateStatus); // Once initialized, run onUpdate
+	            appUpdater.addEventListener(ErrorEvent.ERROR, onError); // If something goes wrong, run onError
+	            appUpdater.initialize(); // Initialize the update framework
+			}
+			
+	        private function onError(event:ErrorEvent):void {
+	            Alert.show(event.toString());
+	        }
+	
+	        private function onUpdate(event:UpdateEvent):void {
+	            event.target.checkNow();
+	        }
+	
+	        private function appUpdateStatus(event:StatusFileUpdateEvent):void {
+	            Alert.show("No updates available");
+	        }
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas x="15" y="15" width="375" height="363" borderStyle="none">
+		<mx:HSlider id="tweetsNumber" x="10" y="55" width="355" minimum="1" maximum="20" snapInterval="1.0" allowTrackClick="true"/>
+		<mx:TextArea x="10" y="11" text="What is the maximum numeber of tweets you would like to see per friend in each window?" width="355" height="36" wordWrap="true" editable="false" enabled="true"/>
+		<mx:Button x="306" y="331" label="Apply" click="apply()"/>
+		<mx:Button x="239" y="331" label="Reset" click="setUserSettings()"/>
+		<mx:Button x="10" y="331" label="Updates" click="checkForUpdates()"/>
+		
+	</mx:Canvas>
+</mx:Panel>
+			

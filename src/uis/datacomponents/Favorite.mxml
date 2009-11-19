@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+		   width="100%"
+		   height="54"
+		   verticalScrollPolicy="off" 
+		   horizontalScrollPolicy="off"
+		   paddingBottom="0" 
+		   paddingTop="0"
+		   paddingLeft="0" 
+		   paddingRight="0"
+		   creationComplete="onInit()">
+
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.data.TwitterUser;
+			import actionscript.data.TwitterStatus;
+			import mx.collections.Sort;
+			import mx.collections.SortField;
+			import mx.rpc.soap.LoadEvent;
+			import mx.controls.Image;
+			
+			import mx.utils.LoaderUtil;
+			import mx.collections.ArrayCollection;
+			
+			import flash.display.Loader;
+			import flash.events.Event;
+			import flash.net.URLRequest;
+			import mx.core.UIComponent;
+			
+			public var user:TwitterUser;
+	        public var status:TwitterStatus;
+	        public var createdAt:Date;
+	        public var time:Number;
+	        public var aFavorite:Boolean;
+	        
+			public var imagePath:String;
+			private var loader:Loader;
+			private var request:URLRequest;
+			public var holder:Bitmap;
+			
+            [Embed(source="../../assets/Star_Prata.gif")]
+            [Bindable]
+            public var star:Class;  
+            
+            private function onInit():void
+			{
+				createdAt = status.createdAt;
+				tweetDate.text = (createdAt.getMonth() + 1) + "\\" + 
+								 createdAt.date.toString() + "\\" + 
+								 createdAt.getFullYear() + "\n" +
+								 (createdAt.hours + 1) + ":" +
+								 createdAt.minutes;
+				
+				statusTA.text = status.text;
+				
+				userName.text = user.screenName;
+				
+				if(user.userBitmapData == null){
+					user.addEventListener("bitmapLoaded", updatePic);
+					function updatePic(e:Event):void
+					{
+						if(user.userBitmapData != null)
+						{
+							loadBitmap();
+							user.removeEventListener("bitmapLoaded", updatePic);
+						}
+					}
+				}
+				else
+				{
+					loadBitmap();
+				}
+				
+			}
+			
+			public function setStatus(user:TwitterUser, status:TwitterStatus, favorite:Boolean = false):void
+			{
+				this.user = user;
+				this.status = status;
+				time = status.createdAt.time;
+				aFavorite = favorite;
+			}
+			
+			private function loadBitmap():void
+			{
+				var bit:Bitmap = new Bitmap(user.userBitmapData);
+				bit.width = 50;
+				bit.height = 50;
+				pic.addChild(bit);
+			}
+			
+			protected function favClicked():void
+			{
+				FactoryManager.instanceOfTwitterEngine.removeFavorite(status);
+			}
+			
+			public function clean():void
+			{
+				user = null;
+	        	status = null;
+	        	createdAt = null;
+	        
+				imagePath = null;
+				loader = null;
+				request = null;
+				holder = null;
+				
+				pic = null;
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Image id="pic" x="2" y="2" height="50" width="50"/>
+	
+	<mx:Image id="fav" x="{this.width - 22}" y="2" height="20" width="20" click="favClicked()" source="{star}"/>
+	
+	<mx:Label text="Tweet Date" x="55" y="25" fontSize="8"/>
+	<mx:Label text="Screen Name" x="55" y="2" fontSize="8"/>
+	<mx:Text x="122" y="24" id="tweetDate" fontSize="8"/>
+	<mx:Text x="122" y="2" id="userName" fontSize="8"/>
+	<mx:TextArea id="statusTA" x="190" y="2" width="{this.width - statusTA.x - 24}" height="50" editable="false" wordWrap="true"/>
+</mx:Canvas>

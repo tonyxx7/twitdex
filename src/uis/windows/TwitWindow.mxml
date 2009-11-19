@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Window xmlns:mx="http://www.adobe.com/2006/mxml"
+		   layout="absolute"
+		   width="700" minWidth="500"
+		   height="500" minHeight="350"
+		   horizontalScrollPolicy="off"
+		   verticalScrollPolicy="off"
+		   showFlexChrome="true"
+		   alwaysInFront="false"
+		   showTitleBar="true"
+		   systemChrome="none"
+		   visible="true"
+		   minimizable = "true"
+		   maximizable = "false"
+		   showGripper = "true"
+		   creationComplete="init()"
+		   nativeDragEnter="handleDragEvent(event)"
+		   nativeDragDrop="handleDropEvent(event)"
+		   transparent="true" 
+		   closing="clean()" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.data.TwitterStatus;
+			import uis.datacomponents.Status;
+			import actionscript.observers.SaveObserver;
+			import actionscript.factories.FactoryManager;
+			import uis.datacomponents.Friend;
+			import actionscript.data.TwitterUser;
+			import uis.datacomponents.FriendThumb;
+			import actionscript.events.TwitterEngineEvent;
+			import actionscript.events.SaveObserverEvent;
+			import mx.events.CloseEvent;
+			import mx.controls.Alert;
+			import mx.events.CollectionEvent;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import mx.collections.ArrayCollection;
+			
+			private var users:ArrayCollection;
+			
+			private function init():void
+			{
+				inputText.text = this.title;
+				
+				if(users == null)
+				{
+					users = new ArrayCollection();
+				}
+				
+				for each(var currUser:TwitterUser in users)
+				{
+					var friendThumb:FriendThumb = new FriendThumb();
+					friendThumb.setUser(currUser);
+					fBox.addChildAt(friendThumb,0);
+				}
+				
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.STATUS_UPDATED, updateDisplay);
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.FAVORITES_UPDATED, updateDisplay);
+				
+				SaveObserver.instanceOfSaveObserver.addEventListener(SaveObserverEvent.SAVES_UPDATED, update);
+				
+				updateDisplay();
+				
+			}
+			
+			private function handleDragEvent(e:NativeDragEvent):void
+			{
+				NativeDragManager.acceptDragDrop(this);
+			}
+			
+			private function handleDropEvent(e:NativeDragEvent):void
+			{
+				if(e.relatedObject is Friend)
+				{
+					var newFriend:Friend = Friend(e.relatedObject);
+					if(!users.contains(newFriend.user))
+					{
+						var friendThumb:FriendThumb = new FriendThumb();
+						friendThumb.setUser(newFriend.user);
+						fBox.addChildAt(friendThumb,0);
+						users.addItem(newFriend.user);
+						newFriend.user.statuses.addEventListener(CollectionEvent.COLLECTION_CHANGE, updateDisplay);
+						updateDisplay();
+					}
+
+				}
+				else if(e.relatedObject is FriendThumb)
+				{
+					var newFriendThumb:FriendThumb = FriendThumb(e.relatedObject);
+					if(!users.contains(newFriendThumb.user))
+					{
+						TwitWindow(newFriendThumb.parentApplication).removeFriendThumb(newFriendThumb);
+						fBox.addChildAt(newFriendThumb,0);
+						users.addItem(newFriendThumb.user);
+						newFriendThumb.user.statuses.addEventListener(CollectionEvent.COLLECTION_CHANGE, updateDisplay);
+						updateDisplay();
+					}
+				}
+			}
+			
+			public function updateDisplay(e:Event = null):void
+			{
+				for(var listIndex:int; listIndex < list.getChildren().length; listIndex++)
+				{
+					list.getChildren()[listIndex].clean();
+				}
+				list.removeAllChildren();
+				
+				var displayHolder:ArrayCollection = new ArrayCollection();
+				var sort:Sort = new Sort();
+				sort.fields = [new SortField("time",false,true)];
+				displayHolder.sort = sort;
+				for each(var user:TwitterUser in users)
+				{
+					var statuses:Array = user.statuses.toArray();
+					for(var statusIndex:int = 0; statusIndex < statuses.length; statusIndex++)
+					{
+						if(statusIndex >= SaveObserver.instanceOfSaveObserver.getUserXML().settings.tweetLimit)
+						{
+							break;
+						}
+						
+						if(statuses[statusIndex] != null && statuses[statusIndex].text != "")
+						{
+							var newTwitterStatus:TwitterStatus = TwitterStatus(statuses[statusIndex]);
+							var newStatus:Status = new Status(); 
+							newStatus.setStatus(user, statuses[statusIndex]); 
+							newStatus.height = 54;
+							displayHolder.addItem(newStatus);
+						}
+					}
+				}
+				displayHolder.refresh();
+				
+				for each(var s:Status in displayHolder)
+				{
+					list.addChild(s);
+				}
+			}
+			
+			public function removeFriendThumb(friendThumb:FriendThumb):void
+			{
+				fBox.removeChild(friendThumb);
+				users.removeItemAt(users.getItemIndex(friendThumb.user));
+				updateDisplay();
+			}
+			
+			public function saveWindow():void
+			{
+				var saveO:SaveObserver = SaveObserver.instanceOfSaveObserver;
+				
+				
+				if(this.title == inputText.text)
+				{
+					if(this.title != "all")
+					{
+						saveO.addUserWindow(inputText.text,users.toArray());
+					}
+					else
+					{
+						Alert.yesLabel = "OK";
+						Alert.show("You may not save over the mighty ALL window... jerk.", "Save... REALLY???", 1, this);
+					}
+				}
+				else
+				{
+					if(!saveO.doesUserWindowExist(inputText.text))
+					{
+						saveO.addUserWindow(inputText.text,users.toArray());
+						this.title = inputText.text;
+					}
+					else
+					{
+						if(inputText.text != "all")
+						{
+							Alert.yesLabel = "Yes";
+							Alert.noLabel = "No";
+							Alert.show("This window already exists. Do you want to save over the existing window?", "Save?", 3, this, alertRemoveHandler);
+							
+							function alertRemoveHandler(event:CloseEvent):void
+							{
+								if (event.detail==Alert.YES)
+								{
+									title = inputText.text;
+									saveO.addUserWindow(inputText.text,users.toArray());
+								}
+							}
+						}
+						else
+						{
+							Alert.yesLabel = "OK";
+							Alert.show("You may not save over the mighty ALL window... jerk.", "Save... REALLY???", 1, this);
+							
+						}
+					}
+				}
+			} 
+			
+			public function addUser(newUser:TwitterUser):void
+			{
+				if(users == null)
+				{
+					users = new ArrayCollection();
+				}
+			
+				users.addItem(newUser);
+			}
+			
+			private function containsUser(thisUser:TwitterUser):Boolean
+			{
+				for each(var currFriend:FriendThumb in fBox.getChildren())
+				{
+					if(currFriend.user.id == thisUser.id)
+					{
+						return true;
+					}
+				}
+				
+				return false;
+			}
+			
+			public function closeWindow():void
+			{
+				this.stage.nativeWindow.close();
+			}
+			
+			private function newUser(e:Event):void
+			{
+				//closeWindow();
+			}
+			
+			private function update(e:Event = null):void
+			{
+				updateDisplay();
+			}
+			
+			private function clean():void
+			{
+				for each(var s:Status in list.getChildren())
+				{
+					s.clean();
+				}
+				list.removeAllChildren();
+				
+				for each(var f:FriendThumb in fBox.getChildren())
+				{
+					f.clean();
+				}
+				fBox.removeAllChildren();
+				
+				users = null;
+				
+				SaveObserver.instanceOfSaveObserver.removeEventListener(SaveObserverEvent.SAVES_UPDATED, update);
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.STATUS_UPDATED, updateDisplay);
+			}
+		]]>
+	</mx:Script>
+	
+    <mx:VBox id="vBox" height="{this.height}" width="{this.width}">
+	    <mx:VBox id="list" 
+	    		 x="5" y="60" 
+	    		 width="{this.width}" 
+	    		 height="{this.height - fBox.height - saveBar.height - 60}" 
+	    		 backgroundAlpha="0" >
+	    </mx:VBox>
+	    
+	    <mx:HBox id="fBox" width="{this.width}" height="110" y="{list.height + 5}" horizontalScrollPolicy="on" verticalScrollPolicy="off">
+	    </mx:HBox>
+		
+		<mx:HBox id="saveBar" width="100%" height="{saveButton.height}" y="{list.height + 5 + fBox.height}" paddingTop="0" paddingBottom="0">
+			<mx:Button id="saveButton" label="Save" click="saveWindow()"/>
+	    	<mx:TextInput id="inputText"/>
+		</mx:HBox>
+	</mx:VBox>
+ </mx:Window>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Window xmlns:mx="http://www.adobe.com/2006/mxml"
+		   layout="absolute"
+		   width="700" minWidth="500"
+		   height="500" minHeight="350"
+		   horizontalScrollPolicy="off"
+		   verticalScrollPolicy="off"
+		   showFlexChrome="true"
+		   alwaysInFront="false"
+		   showTitleBar="true"
+		   systemChrome="none"
+		   visible="true"
+		   minimizable = "true"
+		   maximizable = "false"
+		   showGripper = "true"
+		   creationComplete="init()"
+		   transparent="true" 
+		   closing="clean()" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.data.TwitterDirectMessage;
+			import uis.datacomponents.Message;
+			import uis.datacomponents.Status;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import mx.collections.ArrayCollection;
+			import actionscript.events.TwitterEngineEvent;
+			
+			private function init():void
+			{
+				title = "Messages";
+				
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.MESSAGE_UPDATED, newMessages);
+				
+				updateDisplay();
+			}
+			
+			private function newMessages(e:Event):void
+			{
+				updateDisplay();
+			} 
+			
+			public function updateDisplay():void
+			{
+				for(var listIndex:int; listIndex < list.getChildren().length; listIndex++)
+				{
+					list.getChildren()[listIndex].clean();
+				}
+				list.removeAllChildren();
+				
+				var displayHolder:ArrayCollection = new ArrayCollection();
+				var sort:Sort = new Sort();
+				sort.fields = [new SortField("time",false,true)];
+				displayHolder.sort = sort;
+				for each(var message:TwitterDirectMessage in FactoryManager.instanceOfTwitterEngine.messages)
+				{
+					var newMessage:Message = new Message();
+					newMessage.setMessage(message);
+					newMessage.height = 54;
+					displayHolder.addItem(newMessage);
+				}
+				displayHolder.refresh();
+				
+				for each(var m:Message in displayHolder)
+				{
+					list.addChild(m);
+				}
+			}
+			
+			public function closeWindow():void
+			{
+				this.stage.nativeWindow.close();
+			}
+			
+			private function newUser(e:Event):void
+			{
+				//closeWindow();
+			}
+			
+			public function removeStatus(favorite:Status):void
+			{
+				list.removeChild(favorite);
+				updateDisplay();
+			}
+			
+			private function clean():void
+			{
+				for each(var m:Message in list.getChildren())
+				{
+					m.clean();
+				}
+				list.removeAllChildren();
+				
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.MESSAGE_UPDATED, newMessages);
+			}
+		]]>
+	</mx:Script>
+	
+    <mx:VBox id="vBox" height="{this.height}" width="{this.width}">
+	    <mx:VBox id="list" 
+	    		 x="5" y="60" 
+	    		 width="{this.width}" 
+	    		 height="{this.height}" 
+	    		 backgroundAlpha="0" >
+	    </mx:VBox>
+	</mx:VBox>
+ </mx:Window>

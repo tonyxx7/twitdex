@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Window xmlns:mx="http://www.adobe.com/2006/mxml"
+		   layout="absolute"
+		   width="700" minWidth="500"
+		   height="500" minHeight="350"
+		   horizontalScrollPolicy="off"
+		   verticalScrollPolicy="off"
+		   showFlexChrome="true"
+		   alwaysInFront="false"
+		   showTitleBar="true"
+		   systemChrome="none"
+		   visible="true"
+		   minimizable = "true"
+		   maximizable = "false"
+		   showGripper = "true"
+		   creationComplete="init()"
+		   transparent="true" 
+		   closing="clean()" >
+	
+	<mx:Script>
+		<![CDATA[
+			import uis.data.Favorite;
+			import uis.data.Status;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import mx.collections.ArrayCollection;
+			import actionscript.FactoryManager;
+			import twitteraccess.api.data.TwitterStatus;
+			import actionscript.events.TwitterEngineEvent;
+			
+			private function init():void
+			{
+				title = "Favorites";
+				
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.addEventListener(TwitterEngineEvent.FAVORITES_UPDATED, newFavorites);
+				
+				updateDisplay();
+				
+			}
+			
+			private function newFavorites(e:Event):void
+			{
+				updateDisplay();
+			} 
+			
+			public function updateDisplay():void
+			{
+				for(var listIndex:int; listIndex < list.getChildren().length; listIndex++)
+				{
+					list.getChildren()[listIndex].clean();
+				}
+				list.removeAllChildren();
+				
+				var displayHolder:ArrayCollection = new ArrayCollection();
+				var sort:Sort = new Sort();
+				sort.fields = [new SortField("time",false,true)];
+				displayHolder.sort = sort;
+				for each(var status:TwitterStatus in FactoryManager.instanceOfTwitterEngine.favorites)
+				{
+					var newFavorite:Favorite = new Favorite();
+					newFavorite.setStatus(FactoryManager.instanceOfTwitterEngine.userHash.find(status.user.id), status, true);
+					newFavorite.height = 54;
+					displayHolder.addItem(newFavorite);
+				}
+				displayHolder.refresh();
+				
+				for each(var f:Favorite in displayHolder)
+				{
+					list.addChild(f);
+				}
+			}
+			
+			public function closeWindow():void
+			{
+				this.stage.nativeWindow.close();
+			}
+			
+			private function newUser(e:Event):void
+			{
+				//closeWindow();
+			}
+			
+			public function removeStatus(favorite:Status):void
+			{
+				list.removeChild(favorite);
+				updateDisplay();
+			}
+			
+			private function clean():void
+			{
+				for each(var f:Favorite in list.getChildren())
+				{
+					f.clean();
+				}
+				list.removeAllChildren();
+				
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.NEW_USER, newUser);
+				FactoryManager.instanceOfTwitterEngine.removeEventListener(TwitterEngineEvent.STATUS_UPDATED, newFavorites);
+			}
+		]]>
+	</mx:Script>
+	
+    <mx:VBox id="vBox" height="{this.height}" width="{this.width}">
+	    <mx:VBox id="list" 
+	    		 x="5" y="60" 
+	    		 width="{this.width}" 
+	    		 height="{this.height}" 
+	    		 backgroundAlpha="0" >
+	    </mx:VBox>
+	</mx:VBox>
+ </mx:Window>

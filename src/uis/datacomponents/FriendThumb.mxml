@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+		   width="96" 
+		   height="90" 
+		   creationComplete="onInit()" 
+		   horizontalScrollPolicy="off" 
+		   verticalScrollPolicy="off">
+	<mx:Script>
+		<![CDATA[
+			import actionscript.behaviors.DragBehavior;
+			import actionscript.data.TwitterUser;
+			import uis.windows.TwitWindow;
+			import mx.events.CollectionEvent;
+			
+			public var user:TwitterUser;
+			
+			private function onInit():void
+			{
+				if(user.userBitmapData == null){
+					user.addEventListener("bitmapLoaded", updatePic);
+					function updatePic(e:Event):void
+					{
+						if(user.userBitmapData != null)
+						{
+							loadBitmap();
+							user.removeEventListener("bitmapLoaded", updatePic);
+						}
+					}
+				}
+				else
+				{
+					loadBitmap();
+				}
+				
+				panel.title = user.screenName;
+				
+				var dragBehavior : DragBehavior = new DragBehavior(this, this);
+			}
+			
+			private function loadBitmap():void
+			{
+				var bit:Bitmap = new Bitmap(user.userBitmapData);
+				bit.width = 50;
+				bit.height = 50;
+				pic.addChild(bit);
+			}
+			
+			public function setUser(user:TwitterUser):void
+			{
+				this.user = user;
+			}
+			
+			private function removeThumb():void
+			{
+				TwitWindow(this.parentApplication).removeFriendThumb(this);
+			}
+			
+			public function clean():void
+			{
+				user = null;
+			}
+		]]>
+	</mx:Script>
+
+	<mx:Panel id="panel" fontSize="8" width="100%" layout="absolute">
+		<mx:Image id="pic" x="0" y="0" width="50" height="50" />
+		<mx:Image id="remove" x="50" y="12" width="25" height="25" source="../assets/500px-RedX_svg.png" click="removeThumb()"/>
+	</mx:Panel>
+	
+</mx:Canvas>

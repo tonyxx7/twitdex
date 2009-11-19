@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" 
+		  height="100%"
+		  backgroundAlpha="100"
+		  creationComplete="onInit()" 
+		  dropShadowEnabled="false" >
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			
+			private function onInit():void
+			{
+			}
+			
+			private function updateStatus():void
+			{
+				if(tweet.text != "")
+				{
+					FactoryManager.instanceOfTwitterEngine.sendTweet(tweet.text);
+					tweet.text = "";
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas x="15" y="15" width="280" height="112" borderStyle="none">
+		<mx:TextArea x="0" y="26" width="280" id="tweet" maxChars="140" wordWrap="true" editable="true" enabled="true" height="55"/>
+		<mx:Text x="67.5" y="0" text="140 characters Maximum"/>
+		<mx:Button x="86" y="89" width="108"  label="Update Status" click="updateStatus()"/>
+	</mx:Canvas>
+</mx:Panel>

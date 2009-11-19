@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Module xmlns:mx="http://www.adobe.com/2006/mxml"
+		   layout="absolute"
+		   width="100%"
+		   height="150"
+		   verticalScrollPolicy="off" 
+		   horizontalScrollPolicy="off"
+		   paddingBottom="0" 
+		   paddingTop="0"
+		   paddingLeft="0" 
+		   paddingRight="0"
+		   showEffect="dissolveIn"
+		   creationComplete="onInit()">
+	<mx:states>
+		<mx:State name="msg">
+			<!-- <mx:RemoveChild target="{label1}"/>
+			<mx:RemoveChild target="{tweetDate}"/>
+			<mx:RemoveChild target="{label2}"/> -->
+			<mx:RemoveChild target="{userDescription}"/>
+			<mx:RemoveChild target="{pic}"/>
+			<mx:AddChild relativeTo="{panel}" position="lastChild">
+				<mx:TextArea x="5" y="5" width="{this.width - 32}" height="125" id="messageTA" wordWrap="true" editable="true" enabled="true"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{panel}" position="lastChild">
+				<mx:Button x="5" y="134" label="Send" id="sendBtn" click="sendMessage()"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{panel}" position="lastChild">
+				<mx:Button x="80" y="134" label="Cancel" id="cancelBtn" click="switchState()"/>
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+
+	<mx:Script>
+		<![CDATA[
+			import actionscript.factories.FactoryManager;
+			import actionscript.behaviors.DragBehavior;
+			import actionscript.data.TwitterUser;
+			import mx.collections.Sort;
+			import mx.collections.SortField;
+			import mx.rpc.soap.LoadEvent;
+			import mx.controls.Image;
+			
+			import mx.utils.LoaderUtil;
+			import mx.collections.ArrayCollection;
+			
+			import flash.display.Loader;
+			import flash.events.Event;
+			import flash.net.URLRequest;
+			import mx.core.UIComponent;
+			
+            [Embed(source="../../assets/env.gif")]
+            [Bindable]
+            public static var env:Class;  
+            
+			//public var twits:ArrayCollection;
+	        public var user:TwitterUser;
+	        
+			private function onInit():void
+			{
+				if(user.status.createdAt.fullYear != -1)
+				{
+					var statusDate:Date = user.status.createdAt;
+					/*tweetDate.text = statusDate.getMonth().toString() + "\\" + 
+									 statusDate.date.toString() + "\\" + 
+									 statusDate.getFullYear();*/
+				}
+				
+				if(user.description != null && user.description != "")
+				{
+					userDescription.text = user.description;
+				}
+				
+				if(user.userBitmapData == null){
+					user.addEventListener("bitmapLoaded", updatePic);
+					function updatePic(e:Event):void
+					{
+						if(user.userBitmapData != null)
+						{
+							loadBitmap();
+							user.removeEventListener("bitmapLoaded", updatePic);
+						}
+					}
+				}
+				else
+				{
+					loadBitmap();
+				}
+				
+				panel.title = user.screenName;
+				
+				var dragBehavior : DragBehavior = new DragBehavior(this, this);
+			}
+			
+			public function setUser(user:TwitterUser):void
+			{
+				this.user = user;
+				this.name = user.screenName;
+			}
+			
+			private function loadBitmap():void
+			{
+				var bit:Bitmap = new Bitmap(user.userBitmapData);
+				bit.width = 50;
+				bit.height = 50;
+				pic.addChild(bit);
+			}
+			
+			private function switchState():void
+			{
+				if(currentState == null)
+				{
+					currentState = "msg";
+					this.height = 200;
+				}
+				else
+				{
+					currentState = null;
+					this.height = 90;
+				}
+			}
+			
+			public function sendMessage():void
+			{
+				if(messageTA.text != "")
+				{
+					FactoryManager.instanceOfTwitterEngine.sendMessage(user.screenName, messageTA.text);
+					messageTA.text = "";
+					currentState = "";
+				}
+			}
+			
+			public function clean():void
+			{
+				user = null;
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Panel id="panel" 
+			  x="0" y="0" 
+			  width="100%" 
+			  height="100%" 
+			  paddingBottom="0" 
+			  paddingTop="0"
+			  paddingLeft="0" 
+			  paddingRight="0"
+			  borderAlpha="100" layout="absolute">
+			  
+		<mx:Canvas id="canvas">
+			<mx:Image id="pic" x="0" y="0" height="50" width="50"/>
+			<!-- <mx:Label text="Last tweeted on : " x="58" y="8" fontSize="8" id="label1"/>
+			<mx:Text x="135" y="8" text="NA" id="tweetDate" fontSize="8"/>
+			<mx:Label x="55" y="5" fontSize="10" text="Description : " id="label2"/> -->
+			<mx:TextArea x="55" y="0" height="50" width="275" fontSize="10" id="userDescription" text="None" borderStyle="none" editable="false" wordWrap="true"/>
+		</mx:Canvas>
+		
+		<mx:Image id="envImg" x="{this.width - 50}" y="5" height="15" source="{env}" click="switchState()" />
+	</mx:Panel>
+</mx:Module>

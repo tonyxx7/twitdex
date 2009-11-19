@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" 
+		   layout="absolute" 
+		   width="100%" 
+		   height="100%" 
+		   horizontalScrollPolicy="off" 
+		   verticalScrollPolicy="off" 
+		   visible="true" 
+		   creationComplete="init()" 
+		   dropShadowEnabled="false" >
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.observers.SaveObserver;
+			import actionscript.data.TwitterUser;
+			import actionscript.factories.FactoryManager;
+			import actionscript.twitterconnection.TwitterConnector;
+			import actionscript.events.TwitterEvent;
+			import mx.core.UIComponent;
+			import uis.windows.infowindows.PasswordWindow;
+			import mx.events.FlexEvent;
+			import mx.containers.Accordion;
+			import mx.core.WindowedApplication;
+			import mx.effects.Zoom;
+			import actionscript.events.SaveObserverEvent;
+			import mx.events.CloseEvent;
+			import mx.collections.XMLListCollection;
+			import mx.events.CollectionEvent;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			
+			public var passwordWindow:PasswordWindow;
+			
+			private function init():void
+			{
+				SaveObserver.instanceOfSaveObserver.addEventListener(SaveObserverEvent.SAVES_UPDATED, updateWindow);
+				function updateWindow(e:SaveObserverEvent = null):void
+				{
+					userList.dataProvider = SaveObserver.instanceOfSaveObserver.saveXML;
+				}
+				updateWindow();
+			}
+			
+			private function disableApplication():void
+			{
+                var twitdex:Twitdex = Twitdex(this.parentApplication);
+                
+                twitdex.log.enabled = false;
+                for(var i:int = 0; i < twitdex.accordion.getChildren().length; i++)
+                {
+                	twitdex.accordion.getHeaderAt(i).enabled = false;
+                }
+                
+                twitdex.win.enabled = false;
+                twitdex.tweet.enabled = false;
+                twitdex.settings.enabled = false;
+                twitdex.handlebar.enabled = false;
+                twitdex.minBtn.enabled = false;
+                twitdex.closeBtn.enabled = false;
+			}
+			
+			private function enableApplication(e:Event = null):void
+			{
+                var twitdex:Twitdex = Twitdex(this.parentApplication);
+                
+                twitdex.log.enabled = true;
+                for(var i:int = 0; i < twitdex.accordion.getChildren().length; i++)
+                {
+                	twitdex.accordion.getHeaderAt(i).enabled = true;
+                }
+                twitdex.fri.enabled = true;
+                twitdex.win.enabled = true;
+                twitdex.tweet.enabled = true;
+                twitdex.settings.enabled = true;
+                twitdex.handlebar.enabled = true;
+                twitdex.minBtn.enabled = true;
+                twitdex.closeBtn.enabled = true;
+                
+                passwordWindow.removeEventListener(Event.CLOSE, enableApplication);
+			}
+			
+			private function initLogin():void
+			{
+                if(userList.selectedItem != null)
+                {
+	                disableApplication();
+	                
+	                passwordWindow = new PasswordWindow();
+	                passwordWindow.addEventListener("checkPassword", login);
+	                passwordWindow.addEventListener(Event.CLOSE, enableApplication);
+	                passwordWindow.alwaysInFront = true;
+	                passwordWindow.offSetDisplayObject = DisplayObject(this.parentApplication);
+	                passwordWindow.offSet(115,200);
+                	passwordWindow.open();
+                	
+					this.parentApplication.addEventListener(Event.CLOSING, closingApplication);
+					function closingApplication(e:Event):void
+					{
+						passwordWindow.close();
+					}
+                }
+			}
+        	
+			private function addLoginUser(newUser:String):void
+			{
+				SaveObserver.instanceOfSaveObserver.addNewUser(newUser);
+			}
+			
+			private function removeLoginUser(removeUser:String):void
+			{
+				if(SaveObserver.instanceOfSaveObserver.doesUserExist(removeUser))
+				{
+					Alert.yesLabel = "Yes";
+					Alert.noLabel = "No";
+					Alert.show("If you remove this user there saved information will be lost. Would you still like to remove this user?",
+							   "Remove?", 3, this, alertRemoveHandler);
+					
+					function alertRemoveHandler(event:CloseEvent):void
+					{
+						if (event.detail==Alert.YES)
+						{
+							SaveObserver.instanceOfSaveObserver.removeUser(removeUser);
+						}
+					}
+				}
+				else
+				{
+					Alert.yesLabel = "OK";
+					Alert.show("This user does not exist", "???", 1, this);
+				}
+			}
+			
+			private function login(e:Event):void
+			{
+				var twitter:TwitterConnector = new TwitterConnector();
+				twitter.setAuthenticationCredentials(newUser.text, passwordWindow.password);
+			    twitter.addEventListener(TwitterEvent.ON_VERIFY, verify);
+				twitter.addEventListener(TwitterEvent.ON_GET_DIRECT_MESSAGES,twitterAuthenticationEventHandler);
+				twitter.addEventListener(TwitterEvent.ON_ERROR, twitterErrorEventHandler);
+				twitter.verify();
+			}
+			
+			private function verify(e:TwitterEvent):void
+			{
+				FactoryManager.instanceOfTwitterEngine.setCredentials(TwitterUser(e.data), passwordWindow.password);
+				passwordWindow.close();
+				
+				userList.dataProvider = SaveObserver.instanceOfSaveObserver.saveXML;
+			}
+			
+			private function twitterErrorEventHandler(e:TwitterEvent):void
+			{
+				passwordWindow.showAlert();
+			}
+			
+			private function twitterAuthenticationEventHandler(e:TwitterEvent):void
+			{
+				Alert.show(e.toString());
+			}
+			
+			private function listLabel(item:Object):String
+            {
+                var node:XML = XML(item);
+                
+				if(FactoryManager.instanceOfTwitterEngine.user != null && 
+				   FactoryManager.instanceOfTwitterEngine.user.screenName == node.@name)
+				{
+					return node.@name + "\t(logged in)";
+				}
+				else
+				{
+					return node.@name;
+				}
+            }
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas x="15" y="15" width="300" height="197" borderStyle="none">
+		<mx:Button x="0" y="0" label="Add" width="75" click="addLoginUser(newUser.text)" />
+		<mx:Button x="225" y="0" label="Remove" width="75" click="removeLoginUser(newUser.text)"/>
+		<mx:Button x="112.5" y="175" label="Use" width="75" click="initLogin()"/>
+		<mx:TextInput x="91.5" y="0" width="117" id="newUser" text="{userList.selectedItem.@name}" editable="true" enabled="true" textAlign="center"/>
+		<mx:List id="userList" x="0" y="30" width="300" height="137" doubleClickEnabled="true" doubleClick="initLogin()" labelFunction="listLabel" />
+	</mx:Canvas>
+	
+ </mx:Panel>

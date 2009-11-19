@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" 
+						xmlns:custom="uis.tabcomponents.*"
+						layout="absolute"
+						creationComplete="onInit()" 
+						width="400"	minWidth="400" maxWidth="400"
+						height="500" minHeight="700" maxHeight="700"
+						horizontalScrollPolicy="off"
+						paddingBottom="0" 
+						paddingTop="0"
+						paddingLeft="0" 
+						paddingRight="0" 
+						showTitleBar="false" 
+						showStatusBar="false"
+						showGripper="false"
+						backgroundColor="#ffffff" 
+						horizontalAlign="center" 
+						backgroundAlpha="0"
+						borderStyle="none"
+						hideEffect="zoom"
+						showEffect="unzoom" 
+						showFlexChrome="true" 
+						frameRate="24">
+	
+	<mx:Script>
+		<![CDATA[
+			import actionscript.behaviors.TwitdexDockingBehavior;
+	        import flash.events.ErrorEvent;
+	        import air.update.ApplicationUpdaterUI;
+	        import air.update.events.UpdateEvent;
+	        import mx.controls.Alert;
+			
+			private var appUpdater:ApplicationUpdaterUI = new ApplicationUpdaterUI();
+	        
+			private function onInit():void
+			{
+				
+				
+				/**
+				 * C:\Users\QWERTY\Documents\Flex Builder 3\petprojects\twitdex\src
+				 */
+	            setApplicationVersion(); // Find the current version so we can show it below
+	            appUpdater.updateURL = "http://twitdex.us/update.xml"; // Server-side XML file describing update
+	            appUpdater.isCheckForUpdateVisible = false; // We won't ask permission to check for an update
+	            appUpdater.addEventListener(UpdateEvent.INITIALIZED, onUpdate); // Once initialized, run onUpdate
+		        function onError(event:ErrorEvent):void{Alert.show(event.toString());}
+	            appUpdater.addEventListener(ErrorEvent.ERROR, onError); // If something goes wrong, run onError
+		        function onUpdate(event:UpdateEvent):void{appUpdater.checkNow();}
+	            appUpdater.initialize(); // Initialize the update framework
+	            
+				new TwitdexDockingBehavior(this, this.nativeApplication, win);
+				
+				var loader:Loader = new Loader();
+				loader.contentLoaderInfo.addEventListener(Event.COMPLETE, prepareHandlebar);
+				loader.load(new URLRequest("assets/handlebar.png"));
+				function prepareHandlebar(e:Event):void{handlebar.addChild(new Bitmap(e.target.content.bitmapData));}
+				
+				handlebar.addEventListener(MouseEvent.MOUSE_DOWN, startAppDrag);
+				function startAppDrag(e:MouseEvent):void{stage.nativeWindow.startMove();}
+			}
+						
+			private function accordionChange(e:Event):void
+			{
+				if(accordion.selectedChild is Authentication)
+				{
+					accordion.height = 450;
+				}
+				else if(accordion.selectedChild is FriendList)
+				{
+					accordion.height = this.height - closeBtn.height - minBtn.height - accordion.y;
+				}
+				else if(accordion.selectedChild is OpenWindow)
+				{
+					accordion.height = 525;
+				}
+				else if(accordion.selectedChild is UpdateStatus)
+				{
+					accordion.height = 350;
+				}
+				else if(accordion.selectedChild is Settings)
+				{
+					accordion.height = this.height - closeBtn.height - minBtn.height - accordion.y;
+				}
+			}
+	
+	        // Find the current version for our Label below
+	        private function setApplicationVersion():void {
+	            var appXML:XML = NativeApplication.nativeApplication.applicationDescriptor;
+	            var ns:Namespace = appXML.namespace();
+	        }
+	        
+	        private function min():void
+	        {
+	        	this.minimize();
+	        }
+	        
+	        private function shutDown():void
+	        {
+	        	win.closeWindows();
+	        	close();
+	        }
+		]]>
+	</mx:Script>
+	
+	<mx:Image id="handlebar" x="{this.width/4}" height="40" y="0" useHandCursor="true" buttonMode="true" mouseChildren="false"/>
+		
+	<mx:Accordion  id="accordion" 
+				   backgroundAlpha="0.0" 
+				   height="450" 
+				   width="100%" 
+				   y="{handlebar.height + handlebar.y}" 
+				   headerHeight="32" 
+				   borderStyle="none" 
+				   historyManagementEnabled="false" 
+				   change="accordionChange(event)" >
+
+        
+        <mx:headerRenderer>
+            <mx:Component>
+                <mx:Button fontWeight="bold"
+                           labelPlacement="left"
+                           textAlign="center"
+                           cornerRadius="15"
+                           height="35"
+                           alpha="100"/>
+            </mx:Component>
+        </mx:headerRenderer>
+		
+		<custom:Authentication id="log" label="Saved Users" alpha="100" layout="horizontal" horizontalAlign="center" verticalAlign="middle" />
+		
+	    <!-- <mx:VBox id="fri" label="Friend Bucket" verticalScrollPolicy="off" horizontalScrollPolicy="off" horizontalAlign="center">
+	    	<custom:LookUp id="friLU" x="0" y="0" width="{this.width/2}"/>
+		    <custom:FriendList id="friFL" x="0" y="0" height="{fri.height}" width="{fri.width}"/>
+	    </mx:VBox> -->
+	    
+		<custom:FriendList id="fri" label="Friend Bucket" />
+		
+		<custom:OpenWindow id="win" label="Your Windows" alpha="100" layout="horizontal" horizontalAlign="center" verticalAlign="middle"/>
+		
+		<custom:LookUp id="search" label="Search" alpha="100"/>
+		
+		<custom:UpdateStatus id="tweet" label="Send Tweet" alpha="100" layout="horizontal" horizontalAlign="center" verticalAlign="middle"/>
+		
+		<custom:Settings id="settings" label="Your Settings" alpha="100" layout="horizontal" horizontalAlign="center" verticalAlign="middle"/>
+	</mx:Accordion>
+	
+    <mx:Button id="minBtn" label="Minimize" click="min()" fontWeight="bold" labelPlacement="left" textAlign="center" cornerRadius="15" alpha="100" width="100%" height="35" y="{accordion.height  + accordion.y}"/>
+    
+    <mx:Button id="closeBtn" label="Close" click="shutDown()" fontWeight="bold" labelPlacement="left" textAlign="center" cornerRadius="15" alpha="100" width="100%" height="35" y="{minBtn.y  + minBtn.height-1}"/>
+    
+    <mx:Zoom id="zoom" duration="1000"
+    				   zoomHeightFrom="600" zoomHeightTo="0" 
+        			   zoomWidthFrom="350" zoomWidthTo="0"/>
+        			   
+    <mx:Zoom id="unzoom" duration="1000"
+    					 zoomHeightFrom="0" zoomHeightTo="600" 
+        				 zoomWidthFrom="0" zoomWidthTo="350"/>
+        
+</mx:WindowedApplication>
+
